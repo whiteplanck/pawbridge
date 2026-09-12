@@ -6,6 +6,16 @@
 
 **给不熟悉电脑的 Windows 使用者：** [下载安装包](https://github.com/whiteplanck/pawbridge/releases/tag/v0.1.1)，粘贴对方发来的 `PB1.` 邀请口令，点「领养小猫」即可加入。不需要填写服务地址或安装开发工具。建立小家的一方仍需先配置在线服务，详见 [邀请她使用](docs/invite-partner.md)；可直接转发 [Windows快速开始.txt](docs/Windows快速开始.txt)。
 
+## 从 GitHub 安装（Windows）
+
+1. 登录已获本仓库访问权限的 GitHub 账号，打开 [0.1.1 下载页](https://github.com/whiteplanck/pawbridge/releases/tag/v0.1.1)。在 **Assets** 中下载 `PawBridge_0.1.1_x64-setup.exe`；`Source code` 是源码，日常使用不需要下载。
+2. 双击安装文件，按中文提示安装并打开 PawBridge。
+3. 粘贴对方发来的完整 `PB1.` 邀请口令，点击「领养小猫」。之后打开软件会自动恢复连接。
+
+[直接下载 Windows 安装包](https://github.com/whiteplanck/pawbridge/releases/download/v0.1.1/PawBridge_0.1.1_x64-setup.exe) · [在线阅读中文说明](docs/Windows快速开始.txt) · [下载中文说明](https://github.com/whiteplanck/pawbridge/releases/download/v0.1.1/Windows.txt)
+
+仓库目前为私有：访问时出现 404，先确认登录了正确账号，并已接受仓库访问邀请。源码、部署文件、使用说明都在本仓库，安装包集中放在 Releases。跨城市使用仍需建立小家的一方先部署在线同步服务。
+
 ## 已实现
 
 - 原创矢量猫狗、呼吸／眨眼／招呼动画，透明置顶窗口，收起为桌宠，按住 ⠿ 拖动。
