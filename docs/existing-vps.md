@@ -50,10 +50,10 @@ journalctl -u pawbridge-cert-renew.service -n 30 --no-pager
 curl --fail https://服务器公网IP:8443/health
 ```
 
-续期服务应运行 `certbot renew`，并传入部署钩子 `nginx -t && systemctl reload nginx`。设置定时器后还需模拟续期，验证证书验证路径及重新加载钩子都正常：
+续期服务应运行 `certbot renew`，并传入部署钩子 `nginx -t && systemctl reload nginx`。如果 systemd 定时器已经设置随机延迟，可以传入 `--no-random-sleep-on-renew`，避免 Certbot 再额外等待。设置定时器后还需模拟续期，验证证书验证路径及重新加载钩子都正常：
 
 ```sh
-/opt/pawbridge-certbot/bin/certbot renew --dry-run \
+/opt/pawbridge-certbot/bin/certbot renew --dry-run --no-random-sleep-on-renew \
   --cert-name 服务器公网IP --run-deploy-hooks \
   --deploy-hook '/usr/sbin/nginx -t && /bin/systemctl reload nginx'
 ```
