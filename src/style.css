@@ -60,11 +60,17 @@ footer { text-align: center; font-size: 10px; color: #a39687; margin-top: 17px; 
 .pet-body { animation: breathe 4s ease-in-out infinite; transform-origin: 90px 140px; }
 .eyes { animation: blink 7s infinite; transform-origin: 90px 77px; }
 .tail { animation: wag 2s ease-in-out infinite; transform-origin: 130px 130px; }
-.bubble { position: absolute; bottom: 100%; right: 3px; font-size: 10px; padding: 7px 10px; border-radius: 10px; background: #fffcf4; color: #7a6c5c; white-space: nowrap; opacity: 0; transition: opacity .2s; box-shadow: 0 2px 6px #44331110; pointer-events: none; }
-.pet-dock:hover .bubble, .greet .bubble { opacity: 1; }
-.move { position: absolute; left: 8px; bottom: 8px; color: #897c6b; cursor: grab; font-size: 23px; background: #faf7efdd; }
+.bubble { position: absolute; bottom: 100%; right: 3px; width: max-content; max-width: 160px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 10px; line-height: 1.4; padding: 7px 10px; border-radius: 10px; background: #fffcf4; color: #7a6c5c; overflow-wrap: anywhere; opacity: 0; transition: opacity .2s; box-shadow: 0 2px 6px #44331110; pointer-events: none; z-index: 3; }
+.pet-dock:hover .bubble, .greet .bubble, .visiting .bubble { opacity: 1; }
+.move { position: absolute; left: 8px; bottom: 8px; color: #897c6b; cursor: grab; font-size: 23px; background: #faf7efdd; z-index: 2; }
 .badge { position: absolute; right: 7px; top: 16px; background: #bb7e72; color: #fff; border-radius: 20px; padding: 3px 6px; font-size: 10px; pointer-events: none; }
 .greet .pet-button { animation: hello .6s ease-in-out 4; }
+.visitor { position: absolute; left: 0; bottom: 8px; width: 88px; pointer-events: none; z-index: 1; }
+.visit-heart { position: absolute; left: 70px; bottom: 88px; color: #cf827e; font-size: 26px; line-height: 1; pointer-events: none; z-index: 1; }
+.visiting .visitor { animation: visit-arrival var(--greeting-duration) ease-in-out both; }
+.visiting .pet-button { transform-origin: right bottom; animation: visit-welcome var(--greeting-duration) ease-in-out both; }
+.visiting .visit-heart { animation: visit-heart var(--greeting-duration) ease-in-out both; }
+.gentle-greeting.visiting .pet-button { transform: scale(.74); }
 .compact { width: 180px; height: 190px !important; padding-top: 45px; }
 .compact .panel { display: none; }
 .compact .pet-dock { margin: 0; width: 160px; }
@@ -107,5 +113,23 @@ code { display: block; padding: 15px 10px; margin: 17px 0; font-size: 23px; lett
 @keyframes blink { 0%, 43%, 47%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.1); } }
 @keyframes wag { 50% { transform: rotate(9deg); } }
 @keyframes hello { 50% { transform: translateY(-8px) rotate(-4deg); } }
+@keyframes visit-arrival {
+  0%, 5% { opacity: 0; transform: translateX(-12px) scale(.85); }
+  22%, 32% { opacity: 1; transform: translateX(0); }
+  40% { opacity: 1; transform: translate(5px, -10px) rotate(5deg); }
+  48%, 68% { opacity: 1; transform: translateX(5px); }
+  82% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-12px) scale(.85); }
+}
+@keyframes visit-welcome {
+  0%, 100% { transform: scale(1); }
+  22%, 32%, 68%, 82% { transform: scale(.74); }
+  45%, 55% { transform: scale(.74) rotate(-5deg); }
+}
+@keyframes visit-heart {
+  0%, 28%, 90%, 100% { opacity: 0; transform: translateY(5px) scale(.5); }
+  42%, 65% { opacity: 1; transform: translateY(-4px) scale(1); }
+  80% { opacity: 0; transform: translateY(-15px) scale(.85); }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 360px) { .panel { padding: 15px; } }

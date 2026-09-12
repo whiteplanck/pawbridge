@@ -4,15 +4,15 @@
 
 面向 **macOS 和 Windows 的首个可运行版本**。跨城市使用前，需要部署同步服务；仓库本身不是在线服务。
 
-**给不熟悉电脑的 Windows 使用者：** [下载安装包](https://github.com/whiteplanck/pawbridge/releases/tag/v0.1.1)，粘贴对方发来的 `PB1.` 邀请口令，点「领养小猫」即可加入。不需要填写服务地址或安装开发工具。建立小家的一方仍需先配置在线服务，详见 [邀请她使用](docs/invite-partner.md)；可直接转发 [Windows快速开始.txt](docs/Windows快速开始.txt)。
+**给不熟悉电脑的 Windows 使用者：** [下载安装包](https://github.com/whiteplanck/pawbridge/releases/tag/v0.1.2)，粘贴对方发来的 `PB1.` 邀请口令，点「领养小猫」即可加入。不需要填写服务地址或安装开发工具。建立小家的一方仍需先配置在线服务，详见 [邀请她使用](docs/invite-partner.md)；可直接转发 [Windows快速开始.txt](docs/Windows快速开始.txt)。
 
 ## 从 GitHub 安装（Windows）
 
-1. 登录已获本仓库访问权限的 GitHub 账号，打开 [0.1.1 下载页](https://github.com/whiteplanck/pawbridge/releases/tag/v0.1.1)。在 **Assets** 中下载 `PawBridge_0.1.1_x64-setup.exe`；`Source code` 是源码，日常使用不需要下载。
+1. 登录已获本仓库访问权限的 GitHub 账号，打开 [0.1.2 下载页](https://github.com/whiteplanck/pawbridge/releases/tag/v0.1.2)。在 **Assets** 中下载 `PawBridge_0.1.2_x64-setup.exe`；`Source code` 是源码，日常使用不需要下载。
 2. 双击安装文件，按中文提示安装并打开 PawBridge。
 3. 粘贴对方发来的完整 `PB1.` 邀请口令，点击「领养小猫」。之后打开软件会自动恢复连接。
 
-[直接下载 Windows 安装包](https://github.com/whiteplanck/pawbridge/releases/download/v0.1.1/PawBridge_0.1.1_x64-setup.exe) · [在线阅读中文说明](docs/Windows快速开始.txt) · [下载中文说明](https://github.com/whiteplanck/pawbridge/releases/download/v0.1.1/Windows.txt)
+[直接下载 Windows 安装包](https://github.com/whiteplanck/pawbridge/releases/download/v0.1.2/PawBridge_0.1.2_x64-setup.exe) · [在线阅读中文说明](docs/Windows快速开始.txt) · [下载中文说明](https://github.com/whiteplanck/pawbridge/releases/download/v0.1.2/Windows.txt)
 
 仓库目前为私有：访问时出现 404，先确认登录了正确账号，并已接受仓库访问邀请。源码、部署文件、使用说明都在本仓库，安装包集中放在 Releases。跨城市使用仍需建立小家的一方先部署在线同步服务。
 
@@ -23,6 +23,7 @@
 - 心情、空闲／忙碌／休息、今日计划，手动分享，显示更新时间，旧计划标明非今日状态。
 - 珠海／北京城市天气，每 30 分钟缓存一次，失败不影响互动。
 - 想你了、摸摸头、送零食、文字纸条；收到招呼照常播放动画，忙碌／休息只用于分享状态。
+- **串门（0.1.2）：** 点击「想你了 · 串门」，收件人的桌宠旁会出现对方的小狗／小猫，跳一下、冒爱心后离开。展开和收起都可见，不扩大原生窗口，也不占用整个桌面。
 - SQLite 保存未读消息，离线收信、发送端本地待寄队列、幂等重试、手动已读。
 - 15 秒同步一次，连接失败退避至 60 秒；没有截屏、定位、键盘监听或在线行为监控。
 
@@ -62,7 +63,15 @@ npm run desktop:build
 
 见 [部署说明](docs/deployment.md)。不需要租机房；带持久磁盘的应用托管或小型云服务器即可。未选择供应商，不创建收费资源。
 
-初版是「双方近况 + 小信箱」：招呼动画在收件人的宠物上播放，完整的对方宠物串门剧情、自动启动、系统通知、自动更新、账号恢复和端到端加密尚未实现。未读最多 200 条，界面分批显示 50 条，服务端消息保留 30 天。发送端最多缓存 20 条待寄消息；状态保存失败时需手动再次分享。
+当前是「双方近况 + 小信箱 + 轻量串门」：自动启动、系统通知、自动更新、账号恢复和端到端加密尚未实现。未读最多 200 条，界面分批显示 50 条，服务端消息保留 30 天。发送端最多缓存 20 条待寄消息；状态保存失败时需手动再次分享。
+
+## 更新到 0.1.2：让桌宠串门
+
+先退出桌宠，再安装对应平台的新版本：Mac 将新版应用替换到原位置，Windows 运行新版安装器覆盖安装。不要清除应用数据，原来的服务地址、身份、配对和待寄消息会保留。这次不需要更新同步服务器或重新配对；客户端仍使用原来的 `miss` 消息接口。旧客户端也能收发招呼，但只有 0.1.2 收件端显示来访宠物。
+
+收到「想你了」后，对方的宠物会在本机桌宠旁停留约 5.6 秒。它不会读取对方桌面，也不会真的搬移任何窗口；来访形象由收件端本地绘制。同步周期仍约 15 秒，不是即时推送。
+
+连续收到招呼会依次播放，当前动作与等待动作合计最多 5 条，超过部分只省略动画，消息仍完整保存在信箱；串门结束不代表已读。客户端记住已经提示过的未读消息，重新打开不会反复播放；第一次从旧版本升级时，已有未读消息可能提示一次。系统开启“减少动态效果”时会显示静态来访形象和提示，不新增免打扰设置。
 
 身份凭据和离线近况保存在当前设备的 WebView／浏览器本地存储。不要清除应用数据，也不要把应用数据目录或数据库发给别人。服务端仅保存身份令牌的 SHA-256 摘要，但数据库中的计划和纸条是明文；HTTPS 保护传输，不能阻止服务管理员读取数据库。
 
@@ -81,10 +90,12 @@ docs/            部署说明
 
 ```sh
 npm run check
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:ui
 ```
 
 前端只使用 TypeScript、Vite 和 Tauri API，没有 UI 框架、组件库或动画库。服务端仅使用 Node 内置模块，没有 npm 运行时依赖。开发工具、构建目录、数据库、密钥不进入 Git。修改持久化格式时需显式设计迁移，不要直接覆盖已有用户数据。
+
+界面测试覆盖 Chromium 与 WebKit（含高像素密度），验证双向串门、透明收起窗口的边界、连续招呼排队、离线重试、重启防重复提示及减少动态效果。这些是浏览器内核中的桌面模拟，仍需实际 macOS / Windows 安装包验收系统窗口行为。
 
 天气由 [Open-Meteo](https://open-meteo.com/) 提供，使用固定城市坐标；参考 [Weather API 文档](https://open-meteo.com/en/docs)。桌面打包参考 [Tauri 官方构建说明](https://v2.tauri.app/distribute/pipelines/github/)。

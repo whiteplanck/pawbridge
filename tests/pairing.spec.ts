@@ -77,6 +77,17 @@ test('two desktops pair, share, retry offline, and animate greetings even while 
     await expect(cat.locator('.letter')).toHaveCount(1);
     await cat.getByRole('button', { name: '这些都读过啦' }).click();
     await expect(cat.locator('.letter')).toHaveCount(0);
+    // Visiting is carried by the unchanged 'miss' API in either direction.
+    await dog.locator('#send-miss').click();
+    await cat.locator('#refresh').click();
+    await expect(cat.locator('.pet-dock')).toHaveClass(/visiting/);
+    await expect(cat.locator('.visitor svg.dog')).toHaveCount(1);
+    await expect(cat.locator('#pet svg.cat')).toHaveCount(1);
+    await cat.locator('#tab-partner').click();
+    await cat.locator('#send-miss').click();
+    await dog.locator('#refresh').click();
+    await expect(dog.locator('.pet-dock')).toHaveClass(/visiting/);
+    await expect(dog.locator('.visitor svg.cat')).toHaveCount(1);
     await dog.screenshot({ path: 'test-results/paired-desktop.png', fullPage: true });
     // An unchanged profile becomes stale when the server date rolls over.
     await dog.route('**/api/sync', async route => {

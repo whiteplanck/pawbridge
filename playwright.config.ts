@@ -4,6 +4,10 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: false,
   workers: 1,
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'webkit', use: { browserName: 'webkit', deviceScaleFactor: 2 } },
+  ],
   use: { baseURL: 'http://127.0.0.1:1420', viewport: { width: 420, height: 900 }, trace: 'retain-on-failure' },
   webServer: [
     { command: 'npm run dev', url: 'http://127.0.0.1:1420', reuseExistingServer: false },

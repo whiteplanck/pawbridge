@@ -4,6 +4,7 @@ import { createInvitation } from './invitation';
 import { renderOnboarding } from './onboarding';
 import { desktop, drag, quit, resize } from './desktop';
 import { petSvg } from './pet';
+import { createGreetingPlayer } from './greetings';
 import { load, save } from './storage';
 import { weather } from './weather';
 import { availabilityLabels, cities, greetingLabels } from './types';
@@ -23,12 +24,13 @@ let online = false;
 let statusDirty = false;
 let pendingRender = false;
 let configuring = false;
-const animated = new Set<string>();
+const animated = new Set<string>(saved?.announcedMessages ?? []);
+let greetingPlayer: ReturnType<typeof createGreetingPlayer>;
 const escape = (text: string) => text.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
 const time = (value: string) => new Date(value).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
 const day = (value: string) => new Date(value).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
 function persist() {
-  if (session) save({ session, snapshot, outbox });
+  if (session) save({ session, snapshot, outbox, announcedMessages: [...animated].slice(-200) });
 }
 function toast(message: string) {
   const target = document.querySelector<HTMLElement>('#toast');
@@ -49,8 +51,9 @@ function mount() {
       <p id="toast" class="toast" role="status" aria-live="polite"></p>
       <footer>两座城市，一个小小的日常。</footer>
     </section>
-    <div class="pet-dock"><span id="bubble" class="bubble">点点我，看看对方</span><button class="pet-button" id="pet" aria-label="打开或收起桌宠">${petSvg(snapshot?.self.pet ?? 'dog')}</button><button id="move" class="move" aria-label="拖动桌宠" title="按住拖动">⠿</button><span class="badge" id="badge" hidden></span></div>
+    <div class="pet-dock"><span id="bubble" class="bubble" aria-live="polite">点点我，看看对方</span><button class="pet-button" id="pet" data-pet="${snapshot?.self.pet ?? 'dog'}" aria-label="打开或收起桌宠">${petSvg(snapshot?.self.pet ?? 'dog')}</button><button id="move" class="move" aria-label="拖动桌宠" title="按住拖动">⠿</button><span class="badge" id="badge" hidden></span></div>
   </main>`;
+  greetingPlayer = createGreetingPlayer(document.querySelector<HTMLElement>('.pet-dock')!);
   on('collapse', toggle);
   on('pet', toggle);
   on('quit', quit);
@@ -75,6 +78,7 @@ function onboarding() {
       snapshot = undefined;
       outbox = [];
       animated.clear();
+      greetingPlayer.clear();
       currentTab = 'partner';
       statusDirty = false;
       configuring = false;
@@ -136,8 +140,8 @@ function renderPartner(target: HTMLElement) {
     <div class="chips"><span>${escape(partner.mood)}</span><span class="availability ${partner.availability}">${availabilityLabels[partner.availability]}</span></div>
     <p class="weather" id="weather">正在看看那边的天气…</p><div class="plan"><span class="eyebrow">${today ? '今天的计划' : '上次分享的计划'}</span><p>${escape(partner.plan || '还没有写计划，平平常常的一天也很好。')}</p></div>
     <p class="updated">${time(partner.updatedAt)} 主动分享${today ? '' : ' · 非今日状态'}</p></article>
-    <div class="greetings"><button id="send-miss">♡<span>想你了</span></button><button id="send-pat">✿<span>摸摸头</span></button><button id="send-snack">♧<span>送零食</span></button></div>
-    <form id="note-form" class="note-form"><input aria-label="小纸条内容" name="note" maxlength="160" placeholder="留张小纸条，等你有空看…" required /><button type="submit" aria-label="寄出小纸条">↗</button></form><p class="hint">收到招呼就会动一动，小纸条也会留在信箱里。</p>
+    <div class="greetings"><button id="send-miss" title="让你的桌宠去对方那里串门">♡<span>想你了 · 串门</span></button><button id="send-pat">✿<span>摸摸头</span></button><button id="send-snack">♧<span>送零食</span></button></div>
+    <form id="note-form" class="note-form"><input aria-label="小纸条内容" name="note" maxlength="160" placeholder="留张小纸条，等你有空看…" required /><button type="submit" aria-label="寄出小纸条">↗</button></form><p class="hint">点「想你了」，让你的桌宠去对方身边串门。双方更新至 0.1.2 后可见，收起面板也能收到。</p>
     <p class="weather-credit">天气数据：<a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · 城市天气，非实时定位</p>`;
   void weather(partner.city).then(value => { const el = document.getElementById('weather'); if (el && snapshot?.partner?.city === partner.city) el.textContent = `${cities[partner.city]} · ${value}`; });
   for (const kind of ['miss', 'pat', 'snack'] as GreetingKind[]) on(`send-${kind}`, () => send(kind, ''));
@@ -229,10 +233,13 @@ async function sync() {
     const wasMissing = !snapshot;
     snapshot = next;
     if (next.partner) delete session.invite;
-    persist();
     online = true;
     failures = 0;
-    document.getElementById('pet')!.innerHTML = petSvg(next.self.pet);
+    const resident = document.getElementById('pet')!;
+    if (resident.dataset.pet !== next.self.pet) {
+      resident.innerHTML = petSvg(next.self.pet);
+      resident.dataset.pet = next.self.pet;
+    }
     pendingRender ||= changed;
     if (wasMissing || (pendingRender && currentTab !== 'self' && !(document.activeElement instanceof HTMLInputElement))) {
       renderTab();
@@ -249,11 +256,11 @@ async function sync() {
     for (const id of animated) if (!unreadIds.has(id)) animated.delete(id);
     const fresh = next.messages.filter(letter => !animated.has(letter.id));
     if (fresh.length) {
-      next.messages.forEach(letter => animated.add(letter.id));
-      document.getElementById('bubble')!.textContent = `${next.partner?.name ?? '对方'}的${greetingLabels[fresh[0].kind]}到了 ♡`;
-      document.querySelector('.pet-dock')?.classList.add('greet');
-      setTimeout(() => document.querySelector('.pet-dock')?.classList.remove('greet'), 5000);
+      fresh.forEach(letter => animated.add(letter.id));
+      greetingPlayer.enqueue(fresh.map(letter => ({ id: letter.id, kind: letter.kind,
+        name: next.partner?.name ?? '对方', visitor: next.partner?.pet ?? (next.self.pet === 'dog' ? 'cat' : 'dog') })));
     }
+    persist();
     if (deliveryError) toast(`近况已同步，招呼待寄：${deliveryError.message}`);
   } catch (error) {
     online = false;
