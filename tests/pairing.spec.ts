@@ -54,6 +54,15 @@ test('two desktops pair, share, exchange a safe note, retry offline, and respect
     await cat.getByRole('button', { name: '这些都读过啦' }).click();
     await expect(cat.locator('.letter')).toHaveCount(0);
     await dog.screenshot({ path: 'test-results/paired-desktop.png', fullPage: true });
+    // An unchanged profile becomes stale when the server date rolls over.
+    await dog.route('**/api/sync', async route => {
+      const response = await route.fetch();
+      const data = await response.json();
+      data.serverTime = new Date(Date.now() + 86400000).toISOString();
+      await route.fulfill({ response, json: data });
+    });
+    await dog.getByRole('button', { name: '刷新', exact: true }).click();
+    await expect(dog.locator('.plan')).toContainText('上次分享的计划');
     await dog.getByRole('button', { name: '收起成桌宠' }).click();
     await expect(dog.locator('#panel')).not.toBeVisible();
     await expect(dog.locator('#pet')).toBeVisible();

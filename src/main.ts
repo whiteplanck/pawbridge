@@ -19,6 +19,7 @@ let failures = 0;
 let currentTab = 'partner';
 let online = false;
 let statusDirty = false;
+let pendingRender = false;
 const animated = new Set<string>();
 const escape = (text: string) => text.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
 const time = (value: string) => new Date(value).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
@@ -218,7 +219,8 @@ async function sync() {
       toast('桌宠已经把招呼寄出啦');
     }
     const next = await request<Snapshot>(session, 'sync');
-    const changed = !snapshot || JSON.stringify([next.partner, next.messages]) !== JSON.stringify([snapshot.partner, snapshot.messages]);
+    const changed = !snapshot || day(next.serverTime) !== day(snapshot.serverTime)
+      || JSON.stringify([next.partner, next.messages]) !== JSON.stringify([snapshot.partner, snapshot.messages]);
     const wasMissing = !snapshot;
     snapshot = next;
     if (next.partner) delete session.invite;
@@ -226,7 +228,20 @@ async function sync() {
     online = true;
     failures = 0;
     document.getElementById('pet')!.innerHTML = petSvg(next.self.pet);
-    if (wasMissing || (changed && currentTab !== 'self' && !(document.activeElement instanceof HTMLInputElement))) renderTab();
+    pendingRender ||= changed;
+    if (wasMissing || (pendingRender && currentTab !== 'self' && !(document.activeElement instanceof HTMLInputElement))) {
+      renderTab();
+      pendingRender = false;
+    }
+    if (next.partner && currentTab === 'partner') {
+      const city = next.partner.city;
+      void weather(city).then(value => {
+        const el = document.getElementById('weather');
+        if (el && snapshot?.partner?.city === city) el.textContent = `${cities[city]} · ${value}`;
+      });
+    }
+    const unreadIds = new Set(next.messages.map(letter => letter.id));
+    for (const id of animated) if (!unreadIds.has(id)) animated.delete(id);
     if (next.self.availability === 'available') {
       const fresh = next.messages.filter(letter => !animated.has(letter.id));
       if (fresh.length) {

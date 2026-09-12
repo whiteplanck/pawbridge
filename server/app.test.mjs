@@ -30,6 +30,14 @@ test('one-time pairing, renewal invalidates old code, profiles contain no creden
     assert.throws(() => store.authenticate('wrong'), /失效/);
   } finally { store.close(); }
 });
+test('an expired invite cannot join a room', (t) => {
+  const store = createStore();
+  try {
+    const first = store.create(dog);
+    t.mock.method(Date, 'now', () => first.invite.expiresAt + 1);
+    assert.throws(() => store.join({ ...cat, code: first.invite.code }), /过期/);
+  } finally { t.mock.restoreAll(); store.close(); }
+});
 test('greetings survive restarts, retries are idempotent, rooms and acknowledgements are isolated', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pawbridge-test-'));
   const path = join(dir, 'test.sqlite');
