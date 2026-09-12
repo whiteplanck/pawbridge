@@ -1,5 +1,7 @@
 import './style.css';
-import { ApiError, normalizeServer, request } from './api';
+import { ApiError, request } from './api';
+import { createInvitation } from './invitation';
+import { renderOnboarding } from './onboarding';
 import { desktop, drag, quit, resize } from './desktop';
 import { petSvg } from './pet';
 import { load, save } from './storage';
@@ -20,6 +22,7 @@ let currentTab = 'partner';
 let online = false;
 let statusDirty = false;
 let pendingRender = false;
+let configuring = false;
 const animated = new Set<string>();
 const escape = (text: string) => text.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!);
 const time = (value: string) => new Date(value).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
@@ -63,42 +66,29 @@ async function toggle() {
   try { await resize(expanded); } catch (error) { toast((error as Error).message); }
 }
 function onboarding() {
-  document.getElementById('content')!.innerHTML = `<div class="welcome"><div class="friends">${petSvg('dog')}${petSvg('cat')}</div><h2>把想念，放在桌面上。</h2><p>你的小狗，她的小猫。<br>隔着城市，也能轻轻碰个面。</p></div>
-    <form id="pair-form" class="stack">
-      <label>同步服务地址<input name="server" type="url" value="http://127.0.0.1:8787" required placeholder="https://你的服务域名" /></label>
-      <div class="two-col"><label>你的昵称<input name="name" maxlength="24" placeholder="怎么称呼你" required /></label><label>所在城市<select name="city"><option value="zhuhai">珠海</option><option value="beijing">北京</option></select></label></div>
-      <label>领养方式<select name="mode" id="mode"><option value="create">我是小狗 · 建立我们的小家</option><option value="join">我是小猫 · 用配对码加入</option></select></label>
-      <label id="key-label">建家密钥<input name="setupKey" type="password" autocomplete="off" placeholder="本地测试可留空" /></label>
-      <label id="code-label" hidden>对方的配对码<input name="code" maxlength="32" autocomplete="off" placeholder="12 位配对码" /></label>
-      <button class="primary" type="submit">让我们住进桌面</button><p class="hint">第一次使用需先启动同步服务。两个人填写相同的服务地址。</p>
-    </form>`;
-  document.getElementById('mode')!.addEventListener('change', event => {
-    const join = (event.target as HTMLSelectElement).value === 'join';
-    document.getElementById('code-label')!.hidden = !join;
-    document.getElementById('key-label')!.hidden = join;
-    (document.querySelector('[name="city"]') as HTMLSelectElement).value = join ? 'beijing' : 'zhuhai';
-  });
-  document.getElementById('pair-form')!.addEventListener('submit', async event => {
-    event.preventDefault();
-    const form = event.currentTarget as HTMLFormElement;
-    const data = Object.fromEntries(new FormData(form));
-    const button = form.querySelector('button')!;
-    button.disabled = true;
-    try {
-      const server = normalizeServer(data.server as string);
-      const result = await request<{ token: string; invite?: Invite }>({ server }, data.mode === 'join' ? 'join' : 'create', data);
-      session = { server, ...result };
+  configuring = true;
+  clearTimeout(timer);
+  renderOnboarding(document.getElementById('content')!, {
+    notify: toast,
+    connected: async (next) => {
+      session = next;
+      snapshot = undefined;
+      outbox = [];
+      animated.clear();
+      currentTab = 'partner';
+      statusDirty = false;
+      configuring = false;
       persist();
       home();
       await sync();
-    } catch (error) { toast((error as Error).message); }
-    finally { button.disabled = false; }
+    },
+    cancel: session ? () => { configuring = false; home(); void sync(); } : undefined,
   });
 }
 function home() {
   document.getElementById('content')!.innerHTML = `<div class="connection"><span id="connection-dot"></span><span id="connection-text">正在连接我们的小家…</span><button id="refresh" class="text-button">刷新</button></div>
     <nav aria-label="桌宠面板"><button id="tab-partner" class="active">对方的日常</button><button id="tab-self">我的今天</button><button id="tab-inbox">小信箱 <span id="inbox-count"></span></button></nav>
-    <div id="tab-content"></div><div class="outbox" id="outbox"></div>`;
+    <div id="tab-content"></div><div class="outbox" id="outbox"></div><button id="connection-settings" class="text-button">连接设置</button>`;
   for (const tab of ['partner', 'self', 'inbox']) on(`tab-${tab}`, () => {
     if (currentTab === 'self' && statusDirty && !window.confirm('还有未分享的修改，确定离开这一页吗？')) return;
     statusDirty = false;
@@ -106,6 +96,11 @@ function home() {
     renderTab();
   });
   on('refresh', sync);
+  on('connection-settings', () => {
+    if (syncing) { toast('正在同步，请稍后再打开连接设置'); return; }
+    if (outbox.length || statusDirty) { toast('请先寄出或取消待寄消息，并分享尚未保存的修改'); return; }
+    onboarding();
+  });
   renderTab();
 }
 function renderTab() {
@@ -123,7 +118,16 @@ function renderTab() {
 function renderPartner(target: HTMLElement) {
   const partner = snapshot!.partner;
   if (!partner) {
-    target.innerHTML = `<div class="empty"><span class="letter-icon">✉</span><h2>给另一座城市，留个位置。</h2><p>把配对码告诉她，让小猫来住。</p><code id="invite-code">${escape(session?.invite?.code ?? '尚未生成')}</code><p class="hint">配对码 24 小时内有效，只能用一次。</p><button id="renew" class="secondary">重新生成配对码</button></div>`;
+    let invitation = '';
+    try { if (session?.invite) invitation = createInvitation(session.server, session.invite.code); } catch { /* Local pairing remains available below. */ }
+    target.innerHTML = `<div class="empty"><span class="letter-icon">✉</span><h2>给另一座城市，留个位置。</h2>
+      ${invitation ? `<p>把邀请口令发给她，粘贴后就能领养小猫。</p><textarea id="share-invite" aria-label="给她的邀请口令" readonly rows="3">${escape(invitation)}</textarea><button id="copy-invite" class="primary">复制给她的邀请口令</button>` : '<p>当前是本机测试连接。先配置 HTTPS 在线服务，才能生成给异地的她使用的邀请口令。</p>'}
+      <details class="manual-code"><summary>手动配对码（本机测试／旧版）</summary><code id="invite-code">${escape(session?.invite?.code ?? '尚未生成')}</code></details><p class="hint">邀请 24 小时内有效，只能用一次。</p><button id="renew" class="secondary">重新生成配对码</button></div>`;
+    on('copy-invite', async () => {
+      const field = document.getElementById('share-invite') as HTMLTextAreaElement;
+      try { await navigator.clipboard.writeText(field.value); toast('已复制，把整段邀请口令发给她就好'); }
+      catch { field.focus(); field.select(); toast('请复制已选中的整段邀请口令'); }
+    });
     on('renew', async () => { session!.invite = await request<Invite>(session!, 'invite', {}); persist(); renderTab(); });
     return;
   }
@@ -205,7 +209,7 @@ async function send(kind: GreetingKind, note: string) {
   await sync();
 }
 async function sync() {
-  if (!session || syncing) return;
+  if (!session || syncing || configuring) return;
   syncing = true;
   clearTimeout(timer);
   try {

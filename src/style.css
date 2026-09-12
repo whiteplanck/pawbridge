@@ -78,6 +78,11 @@ label { display: grid; gap: 6px; font-size: 11px; color: #807362; }
 input, select, textarea { width: 100%; border: 1px solid #e2dbce; border-radius: 9px; padding: 10px; background: #fffdf8; min-width: 0; }
 textarea { resize: vertical; line-height: 1.7; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.advanced-setup { margin-top: 20px; border-top: 1px solid #e2dbce; padding-top: 14px; }
+summary { cursor: pointer; font-size: 11px; color: #807362; padding: 6px 0; }
+.manual-code { margin-top: 15px; }
+#share-invite { font-size: 11px; overflow-wrap: anywhere; margin: 5px 0 12px; }
+#cancel-connect { margin-top: 10px; width: 100%; }
 .primary { background: #83967a; color: #fff; padding: 12px; }
 .primary:hover { background: #708566; }
 .secondary { background: #ece7db; padding: 10px 14px; font-size: 12px; }

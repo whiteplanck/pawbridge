@@ -33,12 +33,14 @@ test('two desktops pair, share, retry offline, and animate greetings even while 
   cat.on('pageerror', error => errors.push(error.message));
   try {
     await dog.goto('/');
+    await dog.getByText('建立小家或本机测试', { exact: true }).click();
     await dog.getByLabel('同步服务地址').fill('http://127.0.0.1:8788');
     await dog.getByLabel('你的昵称').fill('珠海小狗');
     await dog.getByRole('button', { name: '让我们住进桌面' }).click();
     await expect(dog.locator('#invite-code')).toHaveText(/^[A-F0-9]{12}$/);
     const code = await dog.locator('#invite-code').textContent();
     await cat.goto('/');
+    await cat.getByText('建立小家或本机测试', { exact: true }).click();
     await cat.getByLabel('同步服务地址').fill('http://127.0.0.1:8788');
     await cat.getByLabel('你的昵称').fill('北京小猫');
     await cat.getByLabel('领养方式').selectOption('join');
