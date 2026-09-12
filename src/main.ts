@@ -37,6 +37,7 @@ function on(id: string, action: () => void | Promise<void>) {
   });
 }
 function mount() {
+  document.documentElement.classList.toggle('desktop', desktop);
   document.body.classList.toggle('desktop', desktop);
   app.innerHTML = `<main class="shell">
     <section class="panel" id="panel">
@@ -132,7 +133,7 @@ function renderPartner(target: HTMLElement) {
     <p class="weather" id="weather">正在看看那边的天气…</p><div class="plan"><span class="eyebrow">${today ? '今天的计划' : '上次分享的计划'}</span><p>${escape(partner.plan || '还没有写计划，平平常常的一天也很好。')}</p></div>
     <p class="updated">${time(partner.updatedAt)} 主动分享${today ? '' : ' · 非今日状态'}</p></article>
     <div class="greetings"><button id="send-miss">♡<span>想你了</span></button><button id="send-pat">✿<span>摸摸头</span></button><button id="send-snack">♧<span>送零食</span></button></div>
-    <form id="note-form" class="note-form"><input aria-label="小纸条内容" name="note" maxlength="160" placeholder="留张小纸条，等你有空看…" required /><button type="submit" aria-label="寄出小纸条">↗</button></form><p class="hint">忙碌或休息时，招呼会安静留在信箱里。</p>
+    <form id="note-form" class="note-form"><input aria-label="小纸条内容" name="note" maxlength="160" placeholder="留张小纸条，等你有空看…" required /><button type="submit" aria-label="寄出小纸条">↗</button></form><p class="hint">收到招呼就会动一动，小纸条也会留在信箱里。</p>
     <p class="weather-credit">天气数据：<a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · 城市天气，非实时定位</p>`;
   void weather(partner.city).then(value => { const el = document.getElementById('weather'); if (el && snapshot?.partner?.city === partner.city) el.textContent = `${cities[partner.city]} · ${value}`; });
   for (const kind of ['miss', 'pat', 'snack'] as GreetingKind[]) on(`send-${kind}`, () => send(kind, ''));
@@ -242,14 +243,12 @@ async function sync() {
     }
     const unreadIds = new Set(next.messages.map(letter => letter.id));
     for (const id of animated) if (!unreadIds.has(id)) animated.delete(id);
-    if (next.self.availability === 'available') {
-      const fresh = next.messages.filter(letter => !animated.has(letter.id));
-      if (fresh.length) {
-        next.messages.forEach(letter => animated.add(letter.id));
-        document.getElementById('bubble')!.textContent = `${next.partner?.name ?? '对方'}的${greetingLabels[fresh[0].kind]}到了 ♡`;
-        document.querySelector('.pet-dock')?.classList.add('greet');
-        setTimeout(() => document.querySelector('.pet-dock')?.classList.remove('greet'), 5000);
-      }
+    const fresh = next.messages.filter(letter => !animated.has(letter.id));
+    if (fresh.length) {
+      next.messages.forEach(letter => animated.add(letter.id));
+      document.getElementById('bubble')!.textContent = `${next.partner?.name ?? '对方'}的${greetingLabels[fresh[0].kind]}到了 ♡`;
+      document.querySelector('.pet-dock')?.classList.add('greet');
+      setTimeout(() => document.querySelector('.pet-dock')?.classList.remove('greet'), 5000);
     }
     if (deliveryError) toast(`近况已同步，招呼待寄：${deliveryError.message}`);
   } catch (error) {

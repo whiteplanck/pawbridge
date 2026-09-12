@@ -1,6 +1,28 @@
 import { test, expect } from '@playwright/test';
 
-test('two desktops pair, share, exchange a safe note, retry offline, and respect quiet status', async ({ browser }) => {
+test('desktop canvas stays transparent and collapsing only changes the native window size', async ({ page }) => {
+  await page.addInitScript(() => {
+    const calls: { command: string; args: unknown }[] = [];
+    Object.assign(window, {
+      isTauri: true,
+      __pawbridgeCalls: calls,
+      __TAURI_INTERNALS__: {
+        metadata: { currentWindow: { label: 'main' } },
+        invoke: async (command: string, args: unknown) => { calls.push({ command, args: JSON.parse(JSON.stringify(args)) }); },
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await page.getByRole('button', { name: '收起成桌宠' }).click();
+  await expect(page.locator('#panel')).not.toBeVisible();
+  const calls = await page.evaluate(() => Reflect.get(window, '__pawbridgeCalls'));
+  expect(calls).toEqual([{ command: 'plugin:window|set_size', args: { label: 'main', value: { Logical: { width: 180, height: 190 } } } }]);
+  await page.screenshot({ path: 'test-results/compact-desktop.png', omitBackground: true });
+});
+
+test('two desktops pair, share, retry offline, and animate greetings even while busy', async ({ browser }) => {
   const a = await browser.newContext({ baseURL: 'http://127.0.0.1:1420', viewport: { width: 420, height: 900 } });
   const b = await browser.newContext({ baseURL: 'http://127.0.0.1:1420', viewport: { width: 420, height: 900 } });
   // Keep this test deterministic and independent of the weather provider.
@@ -43,7 +65,7 @@ test('two desktops pair, share, exchange a safe note, retry offline, and respect
     await expect(dog.locator('#outbox')).toBeEmpty();
     await cat.getByRole('button', { name: '刷新', exact: true }).click();
     await expect(cat.locator('#badge')).toHaveText('1');
-    await expect(cat.locator('.pet-dock')).not.toHaveClass(/greet/);
+    await expect(cat.locator('.pet-dock')).toHaveClass(/greet/);
     await cat.getByRole('button', { name: /小信箱/ }).click();
     await expect(cat.locator('.letter')).toHaveCount(1);
     await expect(cat.locator('.letter')).toContainText('<img src=x onerror=alert(1)>');
