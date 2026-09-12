@@ -19,4 +19,3 @@ export interface Session { server: string; token: string; invite?: Invite }
 export interface PendingGreeting { requestId: string; kind: GreetingKind; note: string }
 export const cities = { zhuhai: '珠海', beijing: '北京' };
 export const availabilityLabels = { available: '有空，来找我吧', busy: '忙碌中', resting: '休息中' };
-export const greetingLabels = { miss: '想你了', pat: '摸摸头', snack: '送零食', note: '小纸条' };

@@ -88,6 +88,17 @@ test('two desktops pair, share, retry offline, and animate greetings even while 
     await dog.locator('#refresh').click();
     await expect(dog.locator('.pet-dock')).toHaveClass(/visiting/);
     await expect(dog.locator('.visitor svg.cat')).toHaveCount(1);
+    // New categories and editable text travel through the unchanged old server.
+    await cat.locator('#tab-greetings').click();
+    await cat.locator('.interaction-grid [data-interaction="hug"]').click();
+    await cat.getByLabel('互动文字', { exact: true }).fill('抱抱你，今晚见！');
+    await cat.getByRole('button', { name: '发送「抱抱」', exact: true }).click();
+    await dog.locator('#refresh').click();
+    await dog.locator('#tab-inbox').click();
+    const hug = dog.locator('.letter').filter({ hasText: '抱抱你，今晚见！' });
+    await expect(hug.locator('strong')).toHaveText('抱抱');
+    await expect(hug.locator('p')).toHaveText('抱抱你，今晚见！');
+    await dog.locator('#tab-partner').click();
     await dog.screenshot({ path: 'test-results/paired-desktop.png', fullPage: true });
     // An unchanged profile becomes stale when the server date rolls over.
     await dog.route('**/api/sync', async route => {

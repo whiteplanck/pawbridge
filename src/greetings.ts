@@ -1,8 +1,8 @@
 import { petSvg } from './pet';
-import { greetingLabels } from './types';
+import { decodeInteraction } from './interactions';
 import type { GreetingKind, Pet } from './types';
 
-interface Cue { id: string; kind: GreetingKind; visitor: Pet; name: string }
+interface Cue { id: string; kind: GreetingKind; note: string; visitor: Pet; name: string }
 
 // Only visual cues are bounded; messages remain in the existing durable inbox.
 const maxCues = 5;
@@ -30,21 +30,25 @@ export function createGreetingPlayer(dock: HTMLElement) {
     visitor.hidden = heart.hidden = true;
     visitor.replaceChildren();
     delete dock.dataset.greetingId;
+    delete dock.dataset.interaction;
     active = undefined;
   }
   function playNext() {
     if (active || !queue.length) return;
     active = queue.shift()!;
-    const visiting = active.kind === 'miss';
+    const action = decodeInteraction(active);
+    const visiting = action.visit;
     const gentle = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const duration = gentle ? 2400 : visiting ? visitDuration : greetingDuration;
     dock.style.setProperty('--greeting-duration', `${duration}ms`);
     dock.dataset.greetingId = active.id;
-    bubble.textContent = visiting ? `${active.name}的${active.visitor === 'dog' ? '小狗' : '小猫'}来串门啦 ♡`
-      : `${active.name}的${greetingLabels[active.kind]}到了 ♡`;
+    dock.dataset.interaction = action.id;
+    bubble.textContent = `${active.name}：${action.text || action.label}`;
+    heart.textContent = action.icon;
+    heart.hidden = action.id === 'note';
     if (visiting) {
       visitor.innerHTML = petSvg(active.visitor);
-      visitor.hidden = heart.hidden = false;
+      visitor.hidden = false;
     }
     // Restart CSS animations even when two consecutive cues have the same kind.
     void dock.offsetWidth;

@@ -1,11 +1,18 @@
 import type { PendingGreeting, Session, Snapshot } from './types';
-interface Saved { session: Session; snapshot?: Snapshot; outbox: PendingGreeting[]; announcedMessages?: string[] }
+import { isInteraction, readInteractionDrafts } from './interactions';
+import type { InteractionDrafts, InteractionId } from './interactions';
+interface Saved {
+  session: Session; snapshot?: Snapshot; outbox: PendingGreeting[]; announcedMessages?: string[];
+  interactionDrafts?: InteractionDrafts; selectedInteraction?: InteractionId;
+}
 const key = 'pawbridge.v1';
 export function load(): Saved | null {
   try {
     const value = JSON.parse(localStorage.getItem(key) || 'null');
     if (!value || typeof value.session?.server !== 'string' || typeof value.session?.token !== 'string') return null;
     return { ...value, outbox: Array.isArray(value.outbox) ? value.outbox : [],
+      interactionDrafts: readInteractionDrafts(value.interactionDrafts),
+      selectedInteraction: isInteraction(value.selectedInteraction) ? value.selectedInteraction : 'miss',
       announcedMessages: Array.isArray(value.announcedMessages)
         ? value.announcedMessages.filter((id: unknown) => typeof id === 'string' && id.length <= 64).slice(-200) : [] };
   } catch { return null; }

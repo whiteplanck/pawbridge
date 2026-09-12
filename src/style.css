@@ -46,6 +46,15 @@ nav button.active { background: #fffdf7; box-shadow: 0 2px 5px #5f513411; color:
 .greetings button { flex: 1; background: #f2e8df; padding: 10px 3px; color: #9b7461; font-size: 23px; }
 .greetings button:hover { background: #eadbce; }
 .greetings span { display: block; color: #715a4b; font-size: 11px; margin-top: 5px; }
+.interaction-composer { gap: 8px; }
+.interaction-composer h2 { font-size: 16px; margin: 0 0 5px; }
+.interaction-composer p { margin: 0; }
+.interaction-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.interaction-grid button { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 2px; font-size: 11px; background: #f1ebe2; border: 1px solid transparent; }
+.interaction-grid button span { font-size: 18px; line-height: 1; color: #ab7c72; }
+.interaction-grid button[aria-pressed="true"] { border-color: #83967a; background: #e8eee2; color: #4b6449; }
+.interaction-tools { display: flex; justify-content: space-between; align-items: center; margin-top: -6px; }
+#customize-greetings { display: block; margin: -7px 0 9px auto; }
 .note-form { display: flex; border: 1px solid #e1dbcf; border-radius: 12px; background: #fffdf8; padding: 4px; }
 .note-form input { min-width: 0; border: 0; background: none; padding: 9px; flex: 1; font-size: 12px; }
 .note-form button { width: 32px; background: #8d9f83; color: white; font-size: 20px; }
@@ -70,6 +79,16 @@ footer { text-align: center; font-size: 10px; color: #a39687; margin-top: 17px; 
 .visiting .visitor { animation: visit-arrival var(--greeting-duration) ease-in-out both; }
 .visiting .pet-button { transform-origin: right bottom; animation: visit-welcome var(--greeting-duration) ease-in-out both; }
 .visiting .visit-heart { animation: visit-heart var(--greeting-duration) ease-in-out both; }
+.greet .visit-heart { animation: greeting-symbol var(--greeting-duration) ease-in-out both; }
+.visiting[data-interaction="hug"] .visitor { animation-name: visit-hug; }
+.visiting[data-interaction="kiss"] .visit-heart { color: #cf718c; font-size: 30px; }
+.greet[data-interaction="pat"] .pet-button, .greet[data-interaction="water"] .pet-button { animation: pet-nod .7s ease-in-out 4; }
+.greet[data-interaction="snack"] .pet-button { animation: pet-munch .6s ease-in-out 4; }
+.greet[data-interaction="morning"] .pet-button { animation: pet-wave .7s ease-in-out 4; }
+.greet[data-interaction="night"] .pet-button { animation: pet-nod 1.5s ease-in-out 2; }
+.greet[data-interaction="night"] .eyes { animation: none; transform: scaleY(.2); }
+.greet[data-interaction="cheer"] .visit-heart, .greet[data-interaction="morning"] .visit-heart { color: #d8a449; }
+.greet[data-interaction="night"] .visit-heart { color: #9a8bbb; }
 .gentle-greeting.visiting .pet-button { transform: scale(.74); }
 .compact { width: 180px; height: 190px !important; padding-top: 45px; }
 .compact .panel { display: none; }
@@ -113,6 +132,20 @@ code { display: block; padding: 15px 10px; margin: 17px 0; font-size: 23px; lett
 @keyframes blink { 0%, 43%, 47%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.1); } }
 @keyframes wag { 50% { transform: rotate(9deg); } }
 @keyframes hello { 50% { transform: translateY(-8px) rotate(-4deg); } }
+@keyframes pet-nod { 50% { transform: translateY(3px) rotate(3deg); } }
+@keyframes pet-munch { 50% { transform: scale(.98, 1.02); } }
+@keyframes pet-wave { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+@keyframes greeting-symbol {
+  0%, 100% { opacity: 0; transform: translateY(5px) scale(.6); }
+  25%, 70% { opacity: 1; transform: translateY(-4px) scale(1); }
+}
+@keyframes visit-hug {
+  0%, 5% { opacity: 0; transform: translateX(-12px) scale(.85); }
+  22% { opacity: 1; transform: translateX(0); }
+  40%, 68% { opacity: 1; transform: translateX(12px) rotate(8deg); }
+  82% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-12px) scale(.85); }
+}
 @keyframes visit-arrival {
   0%, 5% { opacity: 0; transform: translateX(-12px) scale(.85); }
   22%, 32% { opacity: 1; transform: translateX(0); }

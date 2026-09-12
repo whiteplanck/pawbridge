@@ -5,9 +5,12 @@ import { renderOnboarding } from './onboarding';
 import { desktop, drag, quit, resize } from './desktop';
 import { petSvg } from './pet';
 import { createGreetingPlayer } from './greetings';
+import { decodeInteraction, encodeInteraction, interaction } from './interactions';
+import type { InteractionId } from './interactions';
+import { renderInteractionComposer } from './interaction-composer';
 import { load, save } from './storage';
 import { weather } from './weather';
-import { availabilityLabels, cities, greetingLabels } from './types';
+import { availabilityLabels, cities } from './types';
 import type { GreetingKind, Invite, PendingGreeting, Session, Snapshot } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -15,6 +18,8 @@ const saved = load();
 let session: Session | undefined = saved?.session;
 let snapshot: Snapshot | undefined = saved?.snapshot;
 let outbox: PendingGreeting[] = saved?.outbox ?? [];
+let interactionDrafts = saved?.interactionDrafts ?? {};
+let selectedInteraction: InteractionId = saved?.selectedInteraction ?? 'miss';
 let expanded = true;
 let syncing = false;
 let timer: ReturnType<typeof setTimeout>;
@@ -30,7 +35,7 @@ const escape = (text: string) => text.replace(/[&<>"']/g, char => ({ '&': '&amp;
 const time = (value: string) => new Date(value).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
 const day = (value: string) => new Date(value).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
 function persist() {
-  if (session) save({ session, snapshot, outbox, announcedMessages: [...animated].slice(-200) });
+  if (session) save({ session, snapshot, outbox, announcedMessages: [...animated].slice(-200), interactionDrafts, selectedInteraction });
 }
 function toast(message: string) {
   const target = document.querySelector<HTMLElement>('#toast');
@@ -77,6 +82,8 @@ function onboarding() {
       session = next;
       snapshot = undefined;
       outbox = [];
+      interactionDrafts = {};
+      selectedInteraction = 'miss';
       animated.clear();
       greetingPlayer.clear();
       currentTab = 'partner';
@@ -91,9 +98,9 @@ function onboarding() {
 }
 function home() {
   document.getElementById('content')!.innerHTML = `<div class="connection"><span id="connection-dot"></span><span id="connection-text">正在连接我们的小家…</span><button id="refresh" class="text-button">刷新</button></div>
-    <nav aria-label="桌宠面板"><button id="tab-partner" class="active">对方的日常</button><button id="tab-self">我的今天</button><button id="tab-inbox">小信箱 <span id="inbox-count"></span></button></nav>
+    <nav aria-label="桌宠面板"><button id="tab-partner" class="active">对方的日常</button><button id="tab-greetings">互动</button><button id="tab-self">我的今天</button><button id="tab-inbox">小信箱 <span id="inbox-count"></span></button></nav>
     <div id="tab-content"></div><div class="outbox" id="outbox"></div><button id="connection-settings" class="text-button">连接设置</button>`;
-  for (const tab of ['partner', 'self', 'inbox']) on(`tab-${tab}`, () => {
+  for (const tab of ['partner', 'greetings', 'self', 'inbox']) on(`tab-${tab}`, () => {
     if (currentTab === 'self' && statusDirty && !window.confirm('还有未分享的修改，确定离开这一页吗？')) return;
     statusDirty = false;
     currentTab = tab;
@@ -110,12 +117,20 @@ function home() {
 function renderTab() {
   const target = document.getElementById('tab-content');
   if (!target) return;
-  for (const tab of ['partner', 'self', 'inbox']) document.getElementById(`tab-${tab}`)?.classList.toggle('active', tab === currentTab);
+  for (const tab of ['partner', 'greetings', 'self', 'inbox']) document.getElementById(`tab-${tab}`)?.classList.toggle('active', tab === currentTab);
   if (!snapshot) {
     target.innerHTML = '<div class="empty">正在等桌宠带回消息…<p>如果服务暂时离线，可以稍后点击刷新。</p></div>';
     return;
   }
   if (currentTab === 'partner') renderPartner(target);
+  if (currentTab === 'greetings') {
+    if (!snapshot.partner) { target.innerHTML = '<div class="empty">等对方加入后，就能一起互动啦。</div>'; return; }
+    renderInteractionComposer(target, {
+      selected: selectedInteraction, drafts: interactionDrafts, notify: toast,
+      changed: (id, text) => { selectedInteraction = id; interactionDrafts[id] = text; persist(); },
+      send: sendInteraction,
+    });
+  }
   if (currentTab === 'self') renderSelf(target);
   if (currentTab === 'inbox') renderInbox(target);
 }
@@ -141,10 +156,12 @@ function renderPartner(target: HTMLElement) {
     <p class="weather" id="weather">正在看看那边的天气…</p><div class="plan"><span class="eyebrow">${today ? '今天的计划' : '上次分享的计划'}</span><p>${escape(partner.plan || '还没有写计划，平平常常的一天也很好。')}</p></div>
     <p class="updated">${time(partner.updatedAt)} 主动分享${today ? '' : ' · 非今日状态'}</p></article>
     <div class="greetings"><button id="send-miss" title="让你的桌宠去对方那里串门">♡<span>想你了 · 串门</span></button><button id="send-pat">✿<span>摸摸头</span></button><button id="send-snack">♧<span>送零食</span></button></div>
-    <form id="note-form" class="note-form"><input aria-label="小纸条内容" name="note" maxlength="160" placeholder="留张小纸条，等你有空看…" required /><button type="submit" aria-label="寄出小纸条">↗</button></form><p class="hint">点「想你了」，让你的桌宠去对方身边串门。双方更新至 0.1.2 后可见，收起面板也能收到。</p>
+    <button id="customize-greetings" class="text-button">更多互动 · 自定义文字</button>
+    <form id="note-form" class="note-form"><input aria-label="小纸条内容" name="note" maxlength="160" placeholder="留张小纸条，等你有空看…" required /><button type="submit" aria-label="寄出小纸条">↗</button></form><p class="hint">快捷招呼使用你保存的文字。打开「互动」，还能抱抱、亲亲，或说句早安晚安。</p>
     <p class="weather-credit">天气数据：<a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · 城市天气，非实时定位</p>`;
   void weather(partner.city).then(value => { const el = document.getElementById('weather'); if (el && snapshot?.partner?.city === partner.city) el.textContent = `${cities[partner.city]} · ${value}`; });
-  for (const kind of ['miss', 'pat', 'snack'] as GreetingKind[]) on(`send-${kind}`, () => send(kind, ''));
+  for (const id of ['miss', 'pat', 'snack'] as const) on(`send-${id}`, () => sendInteraction(id, interactionDrafts[id] ?? interaction(id).text));
+  on('customize-greetings', () => { currentTab = 'greetings'; renderTab(); });
   document.getElementById('note-form')!.addEventListener('submit', event => {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
@@ -174,7 +191,10 @@ function renderSelf(target: HTMLElement) {
 }
 function renderInbox(target: HTMLElement) {
   const letters = snapshot!.messages;
-  target.innerHTML = `<div class="inbox-header"><h2>想念都有回音</h2>${letters.length ? '<button id="ack" class="text-button">这些都读过啦</button>' : ''}</div>${letters.length ? `<div class="letters">${letters.map(letter => `<article class="letter"><strong>${greetingLabels[letter.kind]}</strong><p>${escape(letter.note || ({ miss: '隔着屏幕，也想贴贴你。', pat: '今天辛苦啦，摸摸头。', snack: '给你送来一份小零食。', note: '' })[letter.kind])}</p><time>${time(letter.createdAt)}</time></article>`).join('')}</div>` : '<div class="empty"><span class="letter-icon">♡</span><p>信箱空空，想念满满。<br>收到的小纸条会出现在这里。</p></div>'}<p class="hint">未读消息保留 30 天；点击已读后收起。每次最多显示 50 条。</p>`;
+  target.innerHTML = `<div class="inbox-header"><h2>想念都有回音</h2>${letters.length ? '<button id="ack" class="text-button">这些都读过啦</button>' : ''}</div>${letters.length ? `<div class="letters">${letters.map(letter => {
+    const action = decodeInteraction(letter);
+    return `<article class="letter"><strong>${escape(action.label)}</strong><p>${escape(action.text)}</p><time>${time(letter.createdAt)}</time></article>`;
+  }).join('')}</div>` : '<div class="empty"><span class="letter-icon">♡</span><p>信箱空空，想念满满。<br>收到的小纸条会出现在这里。</p></div>'}<p class="hint">未读消息保留 30 天；点击已读后收起。每次最多显示 50 条。</p>`;
   on('ack', async () => {
     await request(session!, 'messages/ack', { ids: letters.map(letter => letter.id) });
     await sync();
@@ -203,6 +223,10 @@ function indicators() {
       queue.append(button);
     }
   }
+}
+async function sendInteraction(id: InteractionId, text: string) {
+  const payload = encodeInteraction(id, text);
+  await send(payload.kind, payload.note);
 }
 async function send(kind: GreetingKind, note: string) {
   if (outbox.length >= 20) throw new Error('待寄消息已满，先等网络恢复吧');
@@ -241,7 +265,8 @@ async function sync() {
       resident.dataset.pet = next.self.pet;
     }
     pendingRender ||= changed;
-    if (wasMissing || (pendingRender && currentTab !== 'self' && !(document.activeElement instanceof HTMLInputElement))) {
+    const editingInteraction = currentTab === 'greetings' && document.getElementById('interaction-form');
+    if (wasMissing || (pendingRender && currentTab !== 'self' && !editingInteraction && !(document.activeElement instanceof HTMLInputElement))) {
       renderTab();
       pendingRender = false;
     }
@@ -257,7 +282,7 @@ async function sync() {
     const fresh = next.messages.filter(letter => !animated.has(letter.id));
     if (fresh.length) {
       fresh.forEach(letter => animated.add(letter.id));
-      greetingPlayer.enqueue(fresh.map(letter => ({ id: letter.id, kind: letter.kind,
+      greetingPlayer.enqueue(fresh.map(letter => ({ id: letter.id, kind: letter.kind, note: letter.note,
         name: next.partner?.name ?? '对方', visitor: next.partner?.pet ?? (next.self.pet === 'dog' ? 'cat' : 'dog') })));
     }
     persist();
