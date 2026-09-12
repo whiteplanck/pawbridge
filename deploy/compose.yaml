@@ -1,0 +1,24 @@
+services:
+  pawbridge:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      PAWBRIDGE_SETUP_KEY: ${PAWBRIDGE_SETUP_KEY:?Set a random setup key of at least 24 characters}
+    volumes:
+      - pawbridge-data:/data
+    ports:
+      - "127.0.0.1:8787:8787"
+    mem_limit: 256m
+    logging:
+      options:
+        max-size: "5m"
+        max-file: "2"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+volumes:
+  pawbridge-data:

@@ -1,0 +1,4 @@
+# Replace with a domain pointing at your server. Run Caddy on the host.
+pawbridge.example.com {
+    reverse_proxy 127.0.0.1:8787
+}

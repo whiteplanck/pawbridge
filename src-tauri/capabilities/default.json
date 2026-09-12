@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window",
+  "description": "Only local window movement, resizing, and closing",
+  "windows": ["main"],
+  "permissions": ["core:window:allow-start-dragging", "core:window:allow-set-size", "core:window:allow-close"]
+}
